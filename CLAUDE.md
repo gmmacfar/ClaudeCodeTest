@@ -13,7 +13,13 @@ open index.html   # tic-tac-toe
 
 ## Git & GitHub Workflow
 
-All changes must be committed locally and pushed to GitHub (`https://github.com/gmmacfar/ClaudeCodeTest`). Write clean, descriptive commit messages and push after every meaningful change so there is always a saved, revertable version.
+**Commit and push after every meaningful unit of work** — do not batch up multiple features or fixes into one commit. The goal is that GitHub always reflects the latest working state so nothing is ever lost and any change can be reverted cleanly.
+
+Rules to follow on every task:
+- Commit locally and push to `https://github.com/gmmacfar/ClaudeCodeTest` (`main` branch) as work progresses, not just at the end.
+- Write clean, specific commit messages that describe *what changed and why* (e.g. `"Add screen shake on player damage"` not `"update game"`).
+- If a task involves multiple logical steps (e.g. add a feature, then tweak balance), make a separate commit for each step.
+- Never leave the repo in a state where local commits haven't been pushed.
 
 ## Project Structure
 
