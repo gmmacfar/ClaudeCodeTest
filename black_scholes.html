@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Black-Scholes Calculator</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+      min-height: 100vh;
+    }
+    .card {
+      background: #1e293b;
+      border-radius: 14px;
+      padding: 36px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      height: fit-content;
+    }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #f1f5f9; }
+    .subtitle { font-size: 0.85rem; color: #64748b; margin-bottom: 28px; margin-top: 4px; }
+    .field { margin-bottom: 14px; }
+    label { display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+    input {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 1rem;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #f1f5f9;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: #6366f1; }
+    .hint { font-size: 0.73rem; color: #475569; margin-top: 4px; }
+    button {
+      margin-top: 8px;
+      width: 100%;
+      padding: 13px;
+      font-size: 1rem;
+      font-weight: 600;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #4f46e5; }
+    button:disabled { background: #3730a3; cursor: not-allowed; }
+    .results { margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .result-box { border-radius: 10px; padding: 18px; text-align: center; }
+    .result-box.call { background: #052e16; border: 1px solid #166534; }
+    .result-box.put  { background: #2d0a0a; border: 1px solid #7f1d1d; }
+    .result-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+    .result-box.call .result-label { color: #4ade80; }
+    .result-box.put  .result-label { color: #f87171; }
+    .result-value { font-size: 1.9rem; font-weight: 700; }
+    .result-box.call .result-value { color: #4ade80; }
+    .result-box.put  .result-value { color: #f87171; }
+    .d-values { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .d-box { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; text-align: center; }
+    .d-label { font-size: 0.72rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .d-value { font-size: 1.1rem; font-weight: 600; color: #c4b5fd; }
+    .greeks { margin-top: 12px; background: #0f172a; border-radius: 10px; padding: 16px 20px; border: 1px solid #334155; }
+    .greeks-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin-bottom: 10px; }
+    .greek-header { display: flex; justify-content: space-between; font-size: 0.72rem; color: #475569; margin-bottom: 6px; padding: 0 2px; }
+    .greek-cols { display: flex; gap: 20px; }
+    .greek-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 2px; border-bottom: 1px solid #1e293b; font-size: 0.88rem; }
+    .greek-row:last-child { border-bottom: none; }
+    .greek-name { color: #94a3b8; }
+    .greek-call { color: #4ade80; min-width: 60px; text-align: right; }
+    .greek-put  { color: #f87171; min-width: 60px; text-align: right; }
+    .error { margin-top: 12px; color: #f87171; font-size: 0.85rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    function Field({ label, hint, ...props }) {
+      return (
+        <div className="field">
+          <label>{label}</label>
+          <input {...props} />
+          {hint && <p className="hint">{hint}</p>}
+        </div>
+      );
+    }
+
+    function App() {
+      const [form, setForm] = React.useState({ S: '100', K: '100', r: '0.05', T: '1', sigma: '0.20' });
+      const [result, setResult] = React.useState(null);
+      const [error, setError]   = React.useState('');
+      const [loading, setLoading] = React.useState(false);
+
+      function set(key) {
+        return e => setForm(f => ({ ...f, [key]: e.target.value }));
+      }
+
+      async function calculate() {
+        setError('');
+        setLoading(true);
+        try {
+          const res = await fetch('http://localhost:5001/calculate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              S: form.S, K: form.K, r: form.r, T: form.T, sigma: form.sigma
+            })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Server error');
+          setResult(data);
+        } catch (e) {
+          setError(e.message.includes('fetch') ? 'Could not reach the Python server. Is it running?' : e.message);
+          setResult(null);
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      function handleKey(e) { if (e.key === 'Enter') calculate(); }
+
+      return (
+        <div className="card">
+          <h1>Black-Scholes Calculator</h1>
+          <p className="subtitle">European option pricing model</p>
+
+          <Field label="Stock Price (S)"        type="number" value={form.S}     onChange={set('S')}     onKeyDown={handleKey} hint="Current underlying price" />
+          <Field label="Strike Price (K)"        type="number" value={form.K}     onChange={set('K')}     onKeyDown={handleKey} hint="Option strike price" />
+          <Field label="Risk-Free Rate (r)"      type="number" value={form.r}     onChange={set('r')}     onKeyDown={handleKey} hint="Annual rate — e.g. 0.05 = 5%" />
+          <Field label="Time to Expiry (T)"      type="number" value={form.T}     onChange={set('T')}     onKeyDown={handleKey} hint="In years — e.g. 0.5 = 6 months" />
+          <Field label="Volatility (σ)"          type="number" value={form.sigma} onChange={set('sigma')} onKeyDown={handleKey} hint="Annual vol — e.g. 0.20 = 20%" />
+
+          <button onClick={calculate} disabled={loading}>
+            {loading ? 'Calculating…' : 'Calculate'}
+          </button>
+          {error && <p className="error">{error}</p>}
+
+          {result && (
+            <>
+              <div className="results">
+                <div className="result-box call">
+                  <div className="result-label">Call Price</div>
+                  <div className="result-value">${result.call}</div>
+                </div>
+                <div className="result-box put">
+                  <div className="result-label">Put Price</div>
+                  <div className="result-value">${result.put}</div>
+                </div>
+              </div>
+
+              <div className="d-values">
+                <div className="d-box"><div className="d-label">d1</div><div className="d-value">{result.d1}</div></div>
+                <div className="d-box"><div className="d-label">d2</div><div className="d-value">{result.d2}</div></div>
+              </div>
+
+              <div className="greeks">
+                <div className="greeks-title">Greeks</div>
+                <div className="greek-header">
+                  <span>Greek</span>
+                  <div className="greek-cols"><span>Call</span><span>Put</span></div>
+                </div>
+                {Object.entries(result.greeks).map(([name, [c, p]]) => (
+                  <div className="greek-row" key={name}>
+                    <span className="greek-name">{name}</span>
+                    <div className="greek-cols">
+                      <span className="greek-call">{c}</span>
+                      <span className="greek-put">{p}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
