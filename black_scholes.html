@@ -99,7 +99,7 @@
     }
 
     function App() {
-      const [form, setForm] = React.useState({ S: '100', K: '100', r: '0.05', T: '1', sigma: '0.20' });
+      const [form, setForm] = React.useState({ S: '100', K: '100', r: '5', T: '1', sigma: '20' });
       const [result, setResult] = React.useState(null);
       const [error, setError]   = React.useState('');
       const [loading, setLoading] = React.useState(false);
@@ -116,7 +116,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              S: form.S, K: form.K, r: form.r, T: form.T, sigma: form.sigma
+              S: form.S, K: form.K, r: parseFloat(form.r) / 100, T: form.T, sigma: parseFloat(form.sigma) / 100
             })
           });
           const data = await res.json();
@@ -139,9 +139,9 @@
 
           <Field label="Stock Price (S)"        type="number" value={form.S}     onChange={set('S')}     onKeyDown={handleKey} hint="Current underlying price" />
           <Field label="Strike Price (K)"        type="number" value={form.K}     onChange={set('K')}     onKeyDown={handleKey} hint="Option strike price" />
-          <Field label="Risk-Free Rate (r)"      type="number" value={form.r}     onChange={set('r')}     onKeyDown={handleKey} hint="Annual rate — e.g. 0.05 = 5%" />
-          <Field label="Time to Expiry (T)"      type="number" value={form.T}     onChange={set('T')}     onKeyDown={handleKey} hint="In years — e.g. 0.5 = 6 months" />
-          <Field label="Volatility (σ)"          type="number" value={form.sigma} onChange={set('sigma')} onKeyDown={handleKey} hint="Annual vol — e.g. 0.20 = 20%" />
+          <Field label="Risk-Free Rate (r %)"     type="number" value={form.r}     onChange={set('r')}     onKeyDown={handleKey} step="0.01" hint="Annual rate in % — e.g. 5 = 5%" />
+          <Field label="Time to Expiry (T)"      type="number" value={form.T}     onChange={set('T')}     onKeyDown={handleKey} step="0.01" hint="In years — e.g. 0.5 = 6 months" />
+          <Field label="Volatility (σ %)"         type="number" value={form.sigma} onChange={set('sigma')} onKeyDown={handleKey} step="0.1" hint="Annual vol in % — e.g. 20 = 20%" />
 
           <button onClick={calculate} disabled={loading}>
             {loading ? 'Calculating…' : 'Calculate'}
